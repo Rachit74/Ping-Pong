@@ -4,41 +4,20 @@
 #define WINDOW_HEIGHT 480
 #define RADIUS 10
 
+
+
 /*
-clampToWindow functions makes sure that the ball stays in the window height and width limit
-it's checks the ball position and changes the ball position it it tries to go outside of the limit
-
-pos - vector position object which will have position.x and position.y
+checkHitsBar function checks if the ball hits the bar
+it returns true if the ball hits the bar otherwise it returns false
+circle - circle shape object which represents the ball
+bar - rectangle shape object which represents the bar
 */
-bool clampToWindow(sf::CircleShape& circle) {
-    float radius = circle.getRadius();
-    float diameter = radius * 2.f;
-
-    sf::Vector2f pos = circle.getPosition();
-    bool hitBottom = false;
-
-    if (pos.x < 0.f) {
-        pos.x = 0.f;
+bool checkHitsBar(sf::CircleShape& circle, sf::RectangleShape& bar) {
+    if (circle.getGlobalBounds().intersects(bar.getGlobalBounds())) {
+        return true;
     }
-    
-    if (pos.x > WINDOW_WIDTH - diameter) {
-        pos.x = WINDOW_WIDTH - diameter;
-    }
-
-    if (pos.y < 0.f) {
-        pos.y = 0.f;
-    }
-    
-    if (pos.y > WINDOW_HEIGHT - diameter) {
-        pos.y = WINDOW_HEIGHT - diameter;
-        hitBottom = true;
-    }
-
-    circle.setPosition(pos);
-    return hitBottom;
+    return false;
 }
-
-
 
 int main() {
 
@@ -49,9 +28,28 @@ int main() {
     Ball.setFillColor(sf::Color::White);
     Ball.setPosition(WINDOW_WIDTH/2,WINDOW_HEIGHT/2);
 
-    // gravity logic
-    float veclocity = 0.f;
-    const float gravity = 500.f; // pixels per second squared
+    // Bottom Bar
+    sf::RectangleShape BottomBar(sf::Vector2f(WINDOW_WIDTH, 10.f));
+    BottomBar.setFillColor(sf::Color::White);
+    BottomBar.setPosition(0.f, WINDOW_HEIGHT - 10.f);
+
+    // Upper Bar
+    sf::RectangleShape UpperBar(sf::Vector2f(WINDOW_WIDTH, 10.f));
+    UpperBar.setFillColor(sf::Color::White);
+    UpperBar.setPosition(0.f, 0.f);
+
+    // left bar
+    sf::RectangleShape LeftBar(sf::Vector2f(10.f, WINDOW_HEIGHT));
+    LeftBar.setFillColor(sf::Color::White);
+    LeftBar.setPosition(0.f, 0.f);
+
+    // Right Bar
+    sf::RectangleShape RightBar(sf::Vector2f(10.f, WINDOW_HEIGHT));
+    RightBar.setFillColor(sf::Color::White);
+    RightBar.setPosition(WINDOW_WIDTH - 10.f, 0.f);
+
+    // Ball Velocity Vector
+    sf::Vector2f velocity(300.f, 200.f);
 
     sf::Clock clock;
 
@@ -67,16 +65,37 @@ int main() {
         }
 
         float dt = clock.restart().asSeconds();
-        veclocity += gravity * dt;
-        Ball.move(0.f, veclocity * dt);
+        Ball.move(velocity * dt);
 
-        // clampToWindow(Ball);
-        if (clampToWindow(Ball)) {
-            veclocity = -veclocity * 0.7f; // reverse velocity and apply damping
+
+        // check collision with bottom bar
+        if (checkHitsBar(Ball, BottomBar)) {
+            velocity.y *= -1.f;
         }
+
+        // check collision with upper bar
+        if (checkHitsBar(Ball, UpperBar)) {
+            velocity.y *= -1.f;
+        }
+        // check collision with left bar
+        if (checkHitsBar(Ball, LeftBar)) {  
+            velocity.x *= -1.f;
+
+        }
+        // check collision with right bar
+        if (checkHitsBar(Ball, RightBar)) {
+            velocity.x *= -1.f;
+
+        }
+
+
 
         window.clear();
         window.draw(Ball);
+        window.draw(BottomBar);
+        window.draw(UpperBar);
+        window.draw(LeftBar);
+        window.draw(RightBar);
         window.display();
 
     }
