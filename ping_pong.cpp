@@ -19,6 +19,40 @@ bool checkHitsBar(sf::CircleShape& circle, sf::RectangleShape& bar) {
     return false;
 }
 
+/*
+isBalllOutOfBounds functions check if a player has missed the ball and ball has gone out of window
+returns a bool
+*/
+bool isBallOutOfBounds(const sf::CircleShape& ball) {
+    float radius = ball.getRadius();
+    float diameter = radius * 2.f;
+    sf::Vector2f pos = ball.getPosition();
+
+    return (pos.x < 0.f || pos.x + diameter > WINDOW_WIDTH ||
+            pos.y < 0.f || pos.y + diameter > WINDOW_HEIGHT);
+}
+
+
+/*
+clampBarToWindow function checks if left and right bar are going out of the window
+if they go out of the window we reset their position
+top-left corner of the rectangle is taken as pos.y, we need to sub bar height to calculte bottom borders
+*/
+void clampBarToWindow(sf::RectangleShape& bar) {
+    sf::Vector2f pos = bar.getPosition();
+    float barHeight = bar.getSize().y;
+
+    if (pos.y < 0) {
+        pos.y = 0;
+    }
+
+    if (pos.y > WINDOW_HEIGHT - barHeight) {
+        pos.y = WINDOW_HEIGHT - barHeight;
+    }
+
+    bar.setPosition(pos);
+}
+
 int main() {
 
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Ping Pong C++");
@@ -39,19 +73,25 @@ int main() {
     UpperBar.setPosition(0.f, 0.f);
 
     // left bar
-    sf::RectangleShape LeftBar(sf::Vector2f(10.f, WINDOW_HEIGHT));
+    sf::RectangleShape LeftBar(sf::Vector2f(10.f, 120.f));
     LeftBar.setFillColor(sf::Color::White);
-    LeftBar.setPosition(0.f, 0.f);
+    LeftBar.setPosition(0.f, WINDOW_HEIGHT/2);
 
     // Right Bar
-    sf::RectangleShape RightBar(sf::Vector2f(10.f, WINDOW_HEIGHT));
+    sf::RectangleShape RightBar(sf::Vector2f(10.f, 120.f));
     RightBar.setFillColor(sf::Color::White);
-    RightBar.setPosition(WINDOW_WIDTH - 10.f, 0.f);
+    RightBar.setPosition(WINDOW_WIDTH - 10.f, WINDOW_HEIGHT/2);
 
     // Ball Velocity Vector
     sf::Vector2f velocity(300.f, 200.f);
 
     sf::Clock clock;
+
+    // Ball pause Variables
+    bool ballPaused = false;
+    float pauseTimer = 0.f;
+    const float PAUSE_DURATION = 1.f; // seconds
+
 
     
     // game loop
@@ -64,30 +104,72 @@ int main() {
             }
         }
 
-        float dt = clock.restart().asSeconds();
-        Ball.move(velocity * dt);
+        float dt = clock.restart().asSeconds(); // ONE dt PER FRAME
 
 
-        // check collision with bottom bar
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+            RightBar.move(0.f, -400.f * dt);
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+            RightBar.move(0.f, 400.f * dt);
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+            LeftBar.move(0.f, -400.f * dt);
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+            LeftBar.move(0.f, 400.f * dt);
+        }
+
+
+        if (!ballPaused) {
+            Ball.move(velocity * dt);
+
+            if (isBallOutOfBounds(Ball)) {
+                // rest to center
+                Ball.setPosition(WINDOW_WIDTH / 2.f - RADIUS,
+                                WINDOW_HEIGHT / 2.f - RADIUS);
+
+                // pause ball
+                ballPaused = true;
+                pauseTimer = 0.f;
+
+                // reset velocity direction
+                velocity.x = (velocity.x > 0 ? 300.f : -300.f);
+                velocity.y = 200.f;
+            }
+        }
+        else {
+            pauseTimer += dt;
+            if (pauseTimer >= PAUSE_DURATION) {
+                ballPaused = false;
+            }
+        }
+
+
+        /*
+        check ball collision with respective bars
+        */
         if (checkHitsBar(Ball, BottomBar)) {
             velocity.y *= -1.f;
         }
 
-        // check collision with upper bar
         if (checkHitsBar(Ball, UpperBar)) {
             velocity.y *= -1.f;
         }
-        // check collision with left bar
         if (checkHitsBar(Ball, LeftBar)) {  
             velocity.x *= -1.f;
 
         }
-        // check collision with right bar
         if (checkHitsBar(Ball, RightBar)) {
             velocity.x *= -1.f;
 
         }
 
+        clampBarToWindow(LeftBar);
+        clampBarToWindow(RightBar);
 
 
         window.clear();
